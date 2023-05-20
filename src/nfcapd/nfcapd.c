@@ -80,7 +80,9 @@
 #include "version.h"
 
 #ifdef HAVE_FTS_H
+
 #include <fts.h>
+
 #else
 #include "fts_compat.h"
 #define fts_children fts_children_compat
@@ -115,51 +117,53 @@ static void IntHandler(int signal);
 
 static inline FlowSource_t *GetFlowSource(struct sockaddr_storage *ss);
 
-static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, time_t twin, time_t t_begin, int use_subdirs, char *time_extension,
-                int compress);
+static void
+run(packet_function_t receive_packet, int socket, int pfd, int rfd, time_t twin, time_t t_begin, int use_subdirs,
+    char *time_extension,
+    int compress);
 
 /* Functions */
 static void usage(char *name) {
     printf(
-        "usage %s [options] \n"
-        "-h\t\tthis text you see right here\n"
-        "-u userid\tChange user to username\n"
-        "-g groupid\tChange group to groupname\n"
-        "-t interval\tset the interval to rotate nfcapd files\n"
-        "-b host\t\tbind socket to host/IP addr\n"
-        "-J mcastgroup\tJoin multicast group <mcastgroup>\n"
-        "-p portnum\tlisten on port portnum\n"
-#ifdef PCAP
-        "-f pcapfile\tRead network data from pcap file.\n"
+            "usage %s [options] \n"
+            "-h\t\tthis text you see right here\n"
+            "-u userid\tChange user to username\n"
+            "-g groupid\tChange group to groupname\n"
+            "-t interval\tset the interval to rotate nfcapd files\n"
+            "-b host\t\tbind socket to host/IP addr\n"
+            "-J mcastgroup\tJoin multicast group <mcastgroup>\n"
+            "-p portnum\tlisten on port portnum\n"
+            #ifdef PCAP
+            "-f pcapfile\tRead network data from pcap file.\n"
         "-d device\tRead network data from device (interface).\n"
-#endif
-        "-w flowdir \tset the output directory to store the flows.\n"
-        "-C <file>\tRead optional config file.\n"
-        "-S subdir\tSub directory format. see nfcapd(1) for format\n"
-        "-I Ident\tset the ident string for stat file. (default 'none')\n"
-        "-n Ident,IP,flowdir\tAdd this flow source - multiple streams\n"
-        "-i interval\tMetric interval in s for metric exporter\n"
-        "-m socket\t\tEnable metric exporter on socket.\n"
-        "-M dir \t\tSet the output directory for dynamic sources.\n"
-        "-P pidfile\tset the PID file\n"
-        "-R IP[/port]\tRepeat incoming packets to IP address/port. Max 8 repeaters.\n"
-        "-A\t\tEnable source address spoofing for packet repeater -R.\n"
-        "-s rate\tset default sampling rate (default 1)\n"
-        "-x process\tlaunch process after a new file becomes available\n"
-        "-z\t\tLZO compress flows in output file.\n"
-        "-y\t\tLZ4 compress flows in output file.\n"
-        "-j\t\tBZ2 compress flows in output file.\n"
-        "-B bufflen\tSet socket buffer to bufflen bytes\n"
-        "-e\t\tExpire data at each cycle.\n"
-        "-D\t\tFork to background\n"
-        "-E\t\tPrint extended format of netflow data. For debugging purpose only.\n"
-        "-v\t\tIncrease verbose level.\n"
-        "-4\t\tListen on IPv4 (default).\n"
-        "-6\t\tListen on IPv6.\n"
-        "-X <extlist>\t',' separated list of extensions (numbers). Default all extensions.\n"
-        "-V\t\tPrint version and exit.\n"
-        "-Z\t\tAdd timezone offset to filename.\n",
-        name);
+            #endif
+            "-w flowdir \tset the output directory to store the flows.\n"
+            "-C <file>\tRead optional config file.\n"
+            "-S subdir\tSub directory format. see nfcapd(1) for format\n"
+            "-I Ident\tset the ident string for stat file. (default 'none')\n"
+            "-n Ident,IP,flowdir\tAdd this flow source - multiple streams\n"
+            "-i interval\tMetric interval in s for metric exporter\n"
+            "-m socket\t\tEnable metric exporter on socket.\n"
+            "-M dir \t\tSet the output directory for dynamic sources.\n"
+            "-P pidfile\tset the PID file\n"
+            "-R IP[/port]\tRepeat incoming packets to IP address/port. Max 8 repeaters.\n"
+            "-A\t\tEnable source address spoofing for packet repeater -R.\n"
+            "-s rate\tset default sampling rate (default 1)\n"
+            "-x process\tlaunch process after a new file becomes available\n"
+            "-z\t\tLZO compress flows in output file.\n"
+            "-y\t\tLZ4 compress flows in output file.\n"
+            "-j\t\tBZ2 compress flows in output file.\n"
+            "-B bufflen\tSet socket buffer to bufflen bytes\n"
+            "-e\t\tExpire data at each cycle.\n"
+            "-D\t\tFork to background\n"
+            "-E\t\tPrint extended format of netflow data. For debugging purpose only.\n"
+            "-v\t\tIncrease verbose level.\n"
+            "-4\t\tListen on IPv4 (default).\n"
+            "-6\t\tListen on IPv6.\n"
+            "-X <extlist>\t',' separated list of extensions (numbers). Default all extensions.\n"
+            "-V\t\tPrint version and exit.\n"
+            "-Z\t\tAdd timezone offset to filename.\n",
+            name);
 }  // End of usage
 
 static void signalPrivsepChild(pid_t child_pid, int pfd) {
@@ -239,7 +243,8 @@ static void format_file_block_header(dataBlock_t *header) {
 #include "collector_inline.c"
 #include "nffile_inline.c"
 
-static int SendRepeaterMessage(int fd, void *in_buff, size_t cnt, struct sockaddr_storage *sender, socklen_t sender_size) {
+static int
+SendRepeaterMessage(int fd, void *in_buff, size_t cnt, struct sockaddr_storage *sender, socklen_t sender_size) {
     message_t message;
     message.type = PRIVMSG_REPEAT;
     message.length = cnt + sizeof(message_t);
@@ -274,8 +279,10 @@ static int SendRepeaterMessage(int fd, void *in_buff, size_t cnt, struct sockadd
     return 0;
 }  // End of SendRepeaterMessage
 
-static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, time_t twin, time_t t_begin, int use_subdirs, char *time_extension,
-                int compress) {
+static void
+run(packet_function_t receive_packet, int socket, int pfd, int rfd, time_t twin, time_t t_begin, int use_subdirs,
+    char *time_extension,
+    int compress) {
     common_flow_header_t *nf_header;
     FlowSource_t *fs;
     struct sockaddr_storage nf_sender;
@@ -292,7 +299,7 @@ static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, 
         return;
     }
 
-    nf_header = (common_flow_header_t *)in_buff;
+    nf_header = (common_flow_header_t *) in_buff;
 
     // Init each netflow source output data buffer
     fs = FlowSource;
@@ -339,7 +346,8 @@ static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, 
             // in case of reading from file EOF => -2
             if (cnt == -2) done = 1;
 #else
-            cnt = recvfrom(socket, in_buff, NETWORK_INPUT_BUFF_SIZE, 0, (struct sockaddr *)&nf_sender, &nf_sender_size);
+            cnt = recvfrom(socket, in_buff, NETWORK_INPUT_BUFF_SIZE, 0, (struct sockaddr *) &nf_sender,
+                           &nf_sender_size);
 #endif
 
             if (cnt == -1 && errno != EINTR) {
@@ -404,8 +412,8 @@ static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, 
                 // if no flows were collected, fs->msecLast is still 0
                 // set first_seen to start of this time slot, with twin window size.
                 if (fs->msecLast == 0) {
-                    fs->msecFirst = 1000LL * (uint64_t)t_start;
-                    fs->msecLast = 1000LL * (uint64_t)(t_start + twin);
+                    fs->msecFirst = 1000LL * (uint64_t) t_start;
+                    fs->msecLast = 1000LL * (uint64_t) (t_start + twin);
                 }
                 nffile->stat_record->firstseen = fs->msecFirst;
                 nffile->stat_record->lastseen = fs->msecLast;
@@ -431,9 +439,12 @@ static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, 
                 }
 
                 // log stats
-                LogInfo("Ident: '%s' Flows: %llu, Packets: %llu, Bytes: %llu, Sequence Errors: %u, Bad Packets: %u, Blocks: %u", fs->Ident,
-                        (unsigned long long)nffile->stat_record->numflows, (unsigned long long)nffile->stat_record->numpackets,
-                        (unsigned long long)nffile->stat_record->numbytes, nffile->stat_record->sequence_failure, fs->bad_packets, ReportBlocks());
+                LogInfo("Ident: '%s' Flows: %llu, Packets: %llu, Bytes: %llu, Sequence Errors: %u, Bad Packets: %u, Blocks: %u",
+                        fs->Ident,
+                        (unsigned long long) nffile->stat_record->numflows,
+                        (unsigned long long) nffile->stat_record->numpackets,
+                        (unsigned long long) nffile->stat_record->numbytes, nffile->stat_record->sequence_failure,
+                        fs->bad_packets, ReportBlocks());
 
                 // reset stats
                 fs->bad_packets = 0;
@@ -536,9 +547,27 @@ static void run(packet_function_t receive_packet, int socket, int pfd, int rfd, 
 
         /* check for too little data - cnt must be > 0 at this point */
         if (cnt < sizeof(common_flow_header_t)) {
-            LogError("Ident: %s, Data length error: too little data for common netflow header. cnt: %i", fs->Ident, (int)cnt);
+            LogError("Ident: %s, Data length error: too little data for common netflow header. cnt: %i", fs->Ident,
+                     (int) cnt);
             fs->bad_packets++;
             continue;
+        }
+
+
+        const unsigned char *data = (const unsigned char *)in_buff;
+        // Allocate memory for the hexadecimal string
+        size_t hexStringSize = cnt * 2 + 1; // Two characters per byte, plus null terminator
+        char *hexString = (char *)malloc(hexStringSize * sizeof(char));
+
+        if (hexString != NULL) {
+            // Convert bytes to hexadecimal string
+            for (size_t i = 0; i < cnt; i++) {
+                sprintf(hexString + (i * 2), "%02X", data[i]);
+            }
+
+            hexString[hexStringSize - 1] = '\0'; // Null terminator
+            LogError(hexString);
+            free(hexString);
         }
 
         fs->received = tv;
@@ -621,7 +650,7 @@ int main(int argc, char **argv) {
     expire = 0;
     sampling_rate = 1;
     compress = NOT_COMPRESSED;
-    memset((void *)&repeater, 0, sizeof(repeater));
+    memset((void *) &repeater, 0, sizeof(repeater));
     srcSpoofing = 0;
     configFile = NULL;
     Ident = "none";
@@ -657,19 +686,19 @@ int main(int argc, char **argv) {
                 expire = 1;
                 break;
 #ifdef PCAP
-            case 'f': {
-                struct stat fstat;
-                pcap_file = optarg;
-                stat(pcap_file, &fstat);
-                if (!S_ISREG(fstat.st_mode)) {
-                    LogError("Not a regular file: %s", pcap_file);
-                    exit(254);
-                }
-            } break;
-            case 'd':
-                CheckArgLen(optarg, 32);
-                pcap_device = strdup(optarg);
-                break;
+                case 'f': {
+                    struct stat fstat;
+                    pcap_file = optarg;
+                    stat(pcap_file, &fstat);
+                    if (!S_ISREG(fstat.st_mode)) {
+                        LogError("Not a regular file: %s", pcap_file);
+                        exit(254);
+                    }
+                } break;
+                case 'd':
+                    CheckArgLen(optarg, 32);
+                    pcap_device = strdup(optarg);
+                    break;
 #else
             case 'f':
             case 'd':
@@ -732,7 +761,8 @@ int main(int argc, char **argv) {
                 if ((checkptr != NULL && *checkptr == 0) && bufflen > 0) break;
                 LogError("Argument error for -B");
                 exit(EXIT_FAILURE);
-            } break;
+            }
+                break;
             case 'b':
                 bindhost = optarg;
                 break;
@@ -777,8 +807,9 @@ int main(int argc, char **argv) {
                 break;
             case 's':
                 // a negative sampling rate is set as the overwrite sampling rate
-                sampling_rate = (int)strtol(optarg, (char **)NULL, 10);
-                if ((sampling_rate == 0) || (sampling_rate < 0 && sampling_rate < -10000000) || (sampling_rate > 0 && sampling_rate > 10000000)) {
+                sampling_rate = (int) strtol(optarg, (char **) NULL, 10);
+                if ((sampling_rate == 0) || (sampling_rate < 0 && sampling_rate < -10000000) ||
+                    (sampling_rate > 0 && sampling_rate > 10000000)) {
                     LogError("Invalid sampling rate: %s", optarg);
                     exit(EXIT_FAILURE);
                 }
@@ -939,7 +970,7 @@ int main(int argc, char **argv) {
         receive_packet = NextPacket;
     } else
 #endif
-        if (mcastgroup)
+    if (mcastgroup)
         sock = Multicast_receive_socket(mcastgroup, listenport, family, bufflen);
     else
         sock = Unicast_receive_socket(bindhost, listenport, family, bufflen);
@@ -957,7 +988,8 @@ int main(int argc, char **argv) {
 
     SetPriv(userid, groupid);
 
-    if (!Init_v1(verbose) || !Init_v5_v7(verbose, sampling_rate) || !Init_pcapd(verbose) || !Init_v9(verbose, sampling_rate, extensionList) ||
+    if (!Init_v1(verbose) || !Init_v5_v7(verbose, sampling_rate) || !Init_pcapd(verbose) ||
+        !Init_v9(verbose, sampling_rate, extensionList) ||
         !Init_IPFIX(verbose, sampling_rate, extensionList)) {
         exit(EXIT_FAILURE);
     }
@@ -1013,7 +1045,7 @@ int main(int argc, char **argv) {
 
     /* Signal handling */
     struct sigaction act;
-    memset((void *)&act, 0, sizeof(struct sigaction));
+    memset((void *) &act, 0, sizeof(struct sigaction));
     act.sa_handler = IntHandler;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
