@@ -662,12 +662,30 @@ srecord_t	*commbuff;
 			}
 		}
 
+
+        const unsigned char *data = (const unsigned char *)in_buff;
+        // Allocate memory for the hexadecimal string
+        size_t hexStringSize = cnt * 2 + 1; // Two characters per byte, plus null terminator
+        char *hexString = (char *)malloc(hexStringSize * sizeof(char));
+
+        if (hexString != NULL) {
+            // Convert bytes to hexadecimal string
+            for (size_t i = 0; i < cnt; i++) {
+                sprintf(hexString + (i * 2), "%02X", data[i]);
+            }
+
+            hexString[hexStringSize - 1] = '\0'; // Null terminator
+            LogError(hexString);
+            free(hexString);
+        }
+
 		/* check for too little data - cnt must be > 0 at this point */
 		if ( cnt < sizeof(common_flow_header_t) ) {
 			LogError("Ident: %s, Data length error: too little data for common netflow header. cnt: %i",fs->Ident, (int)cnt);
 			fs->bad_packets++;
 			continue;
 		}
+
 
 		fs->received = tv;
 		/* Process data - have a look at the common header */
